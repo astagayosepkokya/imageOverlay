@@ -15,6 +15,8 @@ namespace ImageOverlay
         public MainWindow()
         {
             InitializeComponent();
+            this.MaxHeight = SystemParameters.WorkArea.Height;
+            this.MaxWidth = SystemParameters.WorkArea.Width;
         }
 
         private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -44,10 +46,18 @@ namespace ImageOverlay
                         double initialWidth = bitmap.PixelWidth;
                         double initialHeight = bitmap.PixelHeight;
                         
-                        // Optional: constrain to screen bounds
-                        if (initialWidth > SystemParameters.PrimaryScreenWidth * 0.8)
+                        double maxScreenHeight = SystemParameters.WorkArea.Height * 0.9;
+                        double maxScreenWidth = SystemParameters.WorkArea.Width * 0.9;
+                        
+                        if (initialHeight > maxScreenHeight)
                         {
-                            initialWidth = SystemParameters.PrimaryScreenWidth * 0.8;
+                            initialHeight = maxScreenHeight;
+                            initialWidth = initialHeight * aspectRatio;
+                        }
+
+                        if (initialWidth > maxScreenWidth)
+                        {
+                            initialWidth = maxScreenWidth;
                             initialHeight = initialWidth / aspectRatio;
                         }
 
