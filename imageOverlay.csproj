@@ -13,6 +13,9 @@
 
   <ItemGroup>
     <Resource Include="images.ico" />
+    <Resource Include="pinIcon.png" />
+    <Resource Include="load.png" />
+    <Resource Include="opacity.png" />
   </ItemGroup>
 
 </Project>

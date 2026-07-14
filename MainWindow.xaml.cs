@@ -2,70 +2,24 @@ using System;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
-using Microsoft.Win32;
-using System.Runtime.InteropServices;
-using System.Windows.Interop;
 using System.Windows.Controls.Primitives;
-using System.Drawing;
-using Forms = System.Windows.Forms;
 
 namespace ImageOverlay
 {
     public partial class MainWindow : Window
     {
         private double aspectRatio = 1.0;
-        private Forms.NotifyIcon? notifyIcon;
         private bool isLocked = false;
-
-        private const int WS_EX_TRANSPARENT = 0x00000020;
-        private const int GWL_EXSTYLE = -20;
-
-        [DllImport("user32.dll")]
-        private static extern int GetWindowLong(IntPtr hwnd, int index);
-
-        [DllImport("user32.dll")]
-        private static extern int SetWindowLong(IntPtr hwnd, int index, int newStyle);
+        private bool isImageLoaded = false;
 
         public MainWindow()
         {
             InitializeComponent();
-            SetupTrayIcon();
-            this.Closed += MainWindow_Closed;
-        }
-
-        private void SetupTrayIcon()
-        {
-            notifyIcon = new Forms.NotifyIcon();
-            notifyIcon.Text = "Image Overlay";
-            notifyIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath!) ?? SystemIcons.Application;
-            notifyIcon.Visible = true;
-
-            var contextMenu = new Forms.ContextMenuStrip();
-            
-            var unlockItem = new Forms.ToolStripMenuItem("Unlock (Disable Click-Through)");
-            unlockItem.Click += (s, e) => UnlockWindow();
-            
-            var closeItem = new Forms.ToolStripMenuItem("Exit");
-            closeItem.Click += (s, e) => this.Close();
-
-            contextMenu.Items.Add(unlockItem);
-            contextMenu.Items.Add(closeItem);
-            
-            notifyIcon.ContextMenuStrip = contextMenu;
-            notifyIcon.DoubleClick += (s, e) => UnlockWindow();
-        }
-
-        private void MainWindow_Closed(object? sender, EventArgs e)
-        {
-            if (notifyIcon != null)
-            {
-                notifyIcon.Visible = false;
-                notifyIcon.Dispose();
-            }
         }
 
         private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            // Only allow dragging if we are not locked
             if (!isLocked)
                 this.DragMove();
         }
@@ -85,7 +39,31 @@ namespace ImageOverlay
                     if (bitmap.PixelWidth > 0 && bitmap.PixelHeight > 0)
                     {
                         aspectRatio = (double)bitmap.PixelWidth / bitmap.PixelHeight;
-                        this.Width = this.Height * aspectRatio;
+                        
+                        // Limit initial loaded size if it's too huge, otherwise just use image size
+                        double initialWidth = bitmap.PixelWidth;
+                        double initialHeight = bitmap.PixelHeight;
+                        
+                        // Optional: constrain to screen bounds
+                        if (initialWidth > SystemParameters.PrimaryScreenWidth * 0.8)
+                        {
+                            initialWidth = SystemParameters.PrimaryScreenWidth * 0.8;
+                            initialHeight = initialWidth / aspectRatio;
+                        }
+
+                        this.Width = initialWidth;
+                        this.Height = initialHeight;
+                    }
+                    
+                    if (!isImageLoaded)
+                    {
+                        // First time image loaded: remove initial background and swap panels
+                        this.Background = System.Windows.Media.Brushes.Transparent;
+                        InitialControlsPanel.Visibility = Visibility.Collapsed;
+                        ControlsPanel.Visibility = Visibility.Visible;
+                        PinButton.Visibility = Visibility.Visible;
+                        ResizeThumb.Visibility = Visibility.Visible;
+                        isImageLoaded = true;
                     }
                 }
                 catch (Exception ex)
@@ -107,7 +85,6 @@ namespace ImageOverlay
         {
             if (isLocked) return;
             
-            // Calculate proportional resizing based on horizontal drag
             if (aspectRatio > 0)
             {
                 double proposedWidth = this.Width + e.HorizontalChange;
@@ -121,38 +98,26 @@ namespace ImageOverlay
 
         private void Lock_Click(object sender, RoutedEventArgs e)
         {
-            MakeClickThrough(true);
-        }
-
-        private void UnlockWindow()
-        {
-            if (Dispatcher.CheckAccess())
-            {
-                MakeClickThrough(false);
-            }
-            else
-            {
-                Dispatcher.Invoke(() => MakeClickThrough(false));
-            }
+            MakeClickThrough(!isLocked);
         }
 
         private void MakeClickThrough(bool enable)
         {
             isLocked = enable;
-            IntPtr hwnd = new WindowInteropHelper(this).Handle;
-            int extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
 
             if (enable)
             {
-                SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_TRANSPARENT);
+                OverlayImage.IsHitTestVisible = false;
                 ControlsPanel.Visibility = Visibility.Hidden;
                 ResizeThumb.Visibility = Visibility.Hidden;
+                PinButton.Opacity = 0.5;
             }
             else
             {
-                SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle & ~WS_EX_TRANSPARENT);
+                OverlayImage.IsHitTestVisible = true;
                 ControlsPanel.Visibility = Visibility.Visible;
                 ResizeThumb.Visibility = Visibility.Visible;
+                PinButton.Opacity = 1.0;
             }
         }
 
