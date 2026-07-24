@@ -3,11 +3,26 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Image Overlay" Height="80" Width="150" Icon="images.ico"
         Topmost="True" Background="#80000000" AllowsTransparency="True" WindowStyle="None"
-        WindowStartupLocation="CenterScreen"
-        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+        WindowStartupLocation="CenterScreen">
     <Grid>
-        <!-- The overlay image -->
-        <Image x:Name="OverlayImage" Stretch="Uniform"/>
+        <!-- The overlay image with panning and zooming -->
+        <Grid x:Name="ViewportGrid" ClipToBounds="True" Background="Transparent"
+              MouseWheel="ViewportGrid_MouseWheel" 
+              MouseRightButtonDown="ViewportGrid_MouseRightButtonDown" 
+              MouseRightButtonUp="ViewportGrid_MouseRightButtonUp" 
+              MouseMove="ViewportGrid_MouseMove"
+              MouseLeftButtonDown="ViewportGrid_MouseLeftButtonDown" 
+              MouseLeftButtonUp="ViewportGrid_MouseLeftButtonUp">
+            
+            <Image x:Name="OverlayImage" Stretch="Uniform" RenderTransformOrigin="0.5,0.5">
+                <Image.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform x:Name="ImageScale" ScaleX="1" ScaleY="1" />
+                        <TranslateTransform x:Name="ImageTranslate" X="0" Y="0" />
+                    </TransformGroup>
+                </Image.RenderTransform>
+            </Image>
+        </Grid>
         
         <!-- Initial Controls (when no image loaded) -->
         <StackPanel x:Name="InitialControlsPanel" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -41,9 +56,20 @@
 
         <!-- Pin Button: Top Left, Always Visible (when image loaded) -->
         <Button x:Name="PinButton" Visibility="Hidden" Click="Lock_Click" HorizontalAlignment="Left" VerticalAlignment="Top" 
-                Margin="5" Width="24" Height="24" Background="Transparent" BorderThickness="0" ToolTip="Toggle Click-Through">
+                Margin="5" Width="24" Height="24" Background="Transparent" BorderThickness="0" ToolTip="Lock (Ctrl+L to unlock)">
             <Image Source="pinIcon.png" Stretch="Uniform"/>
         </Button>
+
+        <!-- Move Thumb: Top Center -->
+        <Thumb x:Name="MoveThumb" Visibility="Hidden" Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="5" Cursor="SizeAll" DragDelta="MoveThumb_DragDelta" ToolTip="Drag to move window">
+            <Thumb.Template>
+                <ControlTemplate>
+                    <Border Background="#B2000000" CornerRadius="4">
+                        <Path Fill="White" Data="M 4,11 L 8,7 L 8,10 L 16,10 L 16,7 L 20,11 L 16,15 L 16,12 L 8,12 L 8,15 Z M 11,4 L 15,8 L 12,8 L 12,16 L 15,16 L 11,20 L 7,16 L 10,16 L 10,8 L 7,8 Z" Stretch="Uniform" Margin="4"/>
+                    </Border>
+                </ControlTemplate>
+            </Thumb.Template>
+        </Thumb>
         
         <!-- Resize Thumb: Bottom Right -->
         <Thumb x:Name="ResizeThumb" Visibility="Hidden" Width="15" Height="15" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="5" Cursor="SizeNWSE" DragDelta="ResizeThumb_DragDelta">
