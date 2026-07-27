@@ -16,7 +16,7 @@ namespace ImageOverlay
 
         // Panning and zooming
         private Point? lastPanPosition;
-        private Point? lastZoomPosition;
+        private Point? lastWindowDragPosition;
         private double currentScale = 1.0;
 
         // Hotkey
@@ -223,18 +223,18 @@ namespace ImageOverlay
             ViewportGrid.ReleaseMouseCapture();
         }
 
-        // Zooming (Right Mouse drag)
+        // Window Dragging (Right Mouse drag)
         private void ViewportGrid_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (isLocked || !isImageLoaded) return;
-            lastZoomPosition = e.GetPosition(this);
+            lastWindowDragPosition = this.PointToScreen(e.GetPosition(this));
             ViewportGrid.CaptureMouse();
         }
 
         private void ViewportGrid_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
             if (isLocked) return;
-            lastZoomPosition = null;
+            lastWindowDragPosition = null;
             if (lastPanPosition == null)
             {
                 ViewportGrid.ReleaseMouseCapture();
@@ -257,15 +257,16 @@ namespace ImageOverlay
                 lastPanPosition = currentPosition;
             }
 
-            if (lastZoomPosition.HasValue)
+            if (lastWindowDragPosition.HasValue)
             {
-                Point currentPosition = e.GetPosition(this);
-                double deltaY = lastZoomPosition.Value.Y - currentPosition.Y; // up is positive zoom
+                Point currentScreenPosition = this.PointToScreen(e.GetPosition(this));
+                double deltaX = currentScreenPosition.X - lastWindowDragPosition.Value.X;
+                double deltaY = currentScreenPosition.Y - lastWindowDragPosition.Value.Y;
 
-                double zoomFactor = 1.0 + (deltaY * 0.01);
-                DoZoom(zoomFactor);
+                this.Left += deltaX;
+                this.Top += deltaY;
 
-                lastZoomPosition = currentPosition;
+                lastWindowDragPosition = currentScreenPosition;
             }
         }
 
