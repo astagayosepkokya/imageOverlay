@@ -14,14 +14,15 @@
               MouseLeftButtonDown="ViewportGrid_MouseLeftButtonDown" 
               MouseLeftButtonUp="ViewportGrid_MouseLeftButtonUp">
             
-            <Image x:Name="OverlayImage" Stretch="Uniform" RenderTransformOrigin="0.5,0.5">
-                <Image.RenderTransform>
+            <Canvas x:Name="ImageCanvas" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Canvas.RenderTransform>
                     <TransformGroup>
                         <ScaleTransform x:Name="ImageScale" ScaleX="1" ScaleY="1" />
                         <TranslateTransform x:Name="ImageTranslate" X="0" Y="0" />
                     </TransformGroup>
-                </Image.RenderTransform>
-            </Image>
+                </Canvas.RenderTransform>
+                <Image x:Name="OverlayImage" Stretch="None" />
+            </Canvas>
         </Grid>
         
         <!-- Initial Controls (when no image loaded) -->
@@ -45,13 +46,27 @@
                 <Image Source="load.png" Stretch="Uniform"/>
             </Button>
             
-            <!-- Opacity Slider: Bottom Center -->
-            <Border x:Name="OpacityBorder" HorizontalAlignment="Center" VerticalAlignment="Bottom" Background="#B2000000" Margin="5" Padding="10,5" CornerRadius="5">
-                <StackPanel Orientation="Horizontal">
-                    <Image Source="opacity.png" Width="16" Height="16" Margin="0,0,5,0" Stretch="Uniform"/>
-                    <Slider x:Name="OpacitySlider" Minimum="0.1" Maximum="1.0" Value="1.0" Width="100" VerticalAlignment="Center" ValueChanged="OpacitySlider_ValueChanged"/>
-                </StackPanel>
-            </Border>
+            <!-- Settings Panel (Bottom Center) -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="5">
+                <Border x:Name="SettingsPanel" Background="#CC000000" CornerRadius="5" Visibility="Collapsed" Padding="10">
+                    <StackPanel Width="150">
+                        <TextBlock Text="Opacity" Foreground="White" FontSize="10"/>
+                        <Slider x:Name="OpacitySlider" Minimum="0.1" Maximum="1.0" Value="1.0" ValueChanged="OpacitySlider_ValueChanged" Margin="0,0,0,5"/>
+                        
+                        <TextBlock Text="Contrast" Foreground="White" FontSize="10"/>
+                        <Slider x:Name="ContrastSlider" Minimum="0.0" Maximum="3.0" Value="1.0" ValueChanged="FilterSlider_ValueChanged" Margin="0,0,0,5"/>
+                        
+                        <TextBlock Text="Tolerance" Foreground="White" FontSize="10"/>
+                        <Slider x:Name="ToleranceSlider" Minimum="0.0" Maximum="1.0" Value="0.1" ValueChanged="FilterSlider_ValueChanged" Margin="0,0,0,5"/>
+
+                        <Button x:Name="EyedropperBtn" Content="Pick Color" Click="EyedropperBtn_Click" Margin="0,5,0,0" Height="22" FontSize="10"/>
+                        <Button x:Name="ClearColorBtn" Content="Clear Mask" Click="ClearColorBtn_Click" Margin="0,5,0,0" Height="22" FontSize="10"/>
+                    </StackPanel>
+                </Border>
+                <Button x:Name="ToggleSettingsBtn" Click="ToggleSettingsBtn_Click" Width="30" Height="15" Background="#B2000000" Foreground="White" BorderThickness="0" ToolTip="Settings">
+                    <TextBlock x:Name="ToggleSettingsText" Text="^" FontSize="10" FontWeight="Bold" Margin="0,-2,0,0"/>
+                </Button>
+            </StackPanel>
         </Grid>
 
         <!-- Pin Button: Top Left, Always Visible (when image loaded) -->
@@ -60,17 +75,6 @@
             <Ellipse Fill="#FF3333" Width="12" Height="12"/>
         </Button>
 
-        <!-- Move Thumb: Top Center -->
-        <Thumb x:Name="MoveThumb" Visibility="Hidden" Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="5" Cursor="SizeAll" DragDelta="MoveThumb_DragDelta" ToolTip="Drag to move window">
-            <Thumb.Template>
-                <ControlTemplate>
-                    <Border Background="#B2000000" CornerRadius="4">
-                        <Path Fill="White" Data="M 4,11 L 8,7 L 8,10 L 16,10 L 16,7 L 20,11 L 16,15 L 16,12 L 8,12 L 8,15 Z M 11,4 L 15,8 L 12,8 L 12,16 L 15,16 L 11,20 L 7,16 L 10,16 L 10,8 L 7,8 Z" Stretch="Uniform" Margin="4"/>
-                    </Border>
-                </ControlTemplate>
-            </Thumb.Template>
-        </Thumb>
-        
         <!-- Resize Thumb: Bottom Right -->
         <Thumb x:Name="ResizeThumb" Visibility="Hidden" Width="15" Height="15" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="5" Cursor="SizeNWSE" DragDelta="ResizeThumb_DragDelta">
             <Thumb.Template>
