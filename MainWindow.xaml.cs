@@ -4,6 +4,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Controls.Primitives;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
 
 namespace ImageOverlay
 {
@@ -25,11 +27,62 @@ namespace ImageOverlay
         private double colorTolerance = 0.1;
         private bool isEyedropperActive = false;
 
+        // Hotkey
+        [DllImport("user32.dll")]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+        [DllImport("user32.dll")]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+        private const int HOTKEY_ID = 9001;
+        private const uint MOD_WIN = 0x0008;
+        private const uint VK_ESCAPE = 0x1B;
+
+        private IntPtr _windowHandle;
+        private HwndSource? _source;
+
+        // WS_EX_TRANSPARENT
+        private const int WS_EX_TRANSPARENT = 0x00000020;
+        private const int GWL_EXSTYLE = -20;
+
+        [DllImport("user32.dll")]
+        private static extern int GetWindowLong(IntPtr hwnd, int index);
+
+        [DllImport("user32.dll")]
+        private static extern int SetWindowLong(IntPtr hwnd, int index, int newStyle);
+
         public MainWindow()
         {
             InitializeComponent();
             this.MaxHeight = SystemParameters.WorkArea.Height;
             this.MaxWidth = SystemParameters.WorkArea.Width;
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            _windowHandle = new WindowInteropHelper(this).Handle;
+            _source = HwndSource.FromHwnd(_windowHandle);
+            _source?.AddHook(HwndHook);
+            RegisterHotKey(_windowHandle, HOTKEY_ID, MOD_WIN, VK_ESCAPE);
+        }
+
+        private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            const int WM_HOTKEY = 0x0312;
+            if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
+            {
+                MakeClickThrough(!isLocked);
+                handled = true;
+            }
+            return IntPtr.Zero;
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            _source?.RemoveHook(HwndHook);
+            UnregisterHotKey(_windowHandle, HOTKEY_ID);
+            base.OnClosed(e);
         }
         
         private void LoadImage_Click(object sender, RoutedEventArgs e)
@@ -328,16 +381,22 @@ namespace ImageOverlay
         {
             isLocked = enable;
 
+            IntPtr hwnd = new WindowInteropHelper(this).Handle;
+            int extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+
             if (enable)
             {
-                ViewportGrid.IsHitTestVisible = false;
+                // Let OS know entire window is click-through
+                SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_TRANSPARENT);
+                
                 ControlsPanel.Visibility = Visibility.Hidden;
                 ResizeThumb.Visibility = Visibility.Hidden;
                 PinButton.Opacity = 0.5;
             }
             else
             {
-                ViewportGrid.IsHitTestVisible = true;
+                SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle & ~WS_EX_TRANSPARENT);
+                
                 ControlsPanel.Visibility = Visibility.Visible;
                 ResizeThumb.Visibility = Visibility.Visible;
                 PinButton.Opacity = 1.0;
