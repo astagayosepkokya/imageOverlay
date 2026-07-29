@@ -56,8 +56,8 @@
 
         <!-- Pin Button: Top Left, Always Visible (when image loaded) -->
         <Button x:Name="PinButton" Visibility="Hidden" Click="Lock_Click" HorizontalAlignment="Left" VerticalAlignment="Top" 
-                Margin="5" Width="24" Height="24" Background="Transparent" BorderThickness="0" ToolTip="Lock (Ctrl+L to unlock)">
-            <Image Source="pinIcon.png" Stretch="Uniform"/>
+                Margin="5" Width="16" Height="16" Background="Transparent" BorderThickness="0" ToolTip="Toggle Lock">
+            <Ellipse Fill="#FF3333" Width="12" Height="12"/>
         </Button>
 
         <!-- Move Thumb: Top Center -->

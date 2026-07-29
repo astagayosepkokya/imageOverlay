@@ -19,63 +19,11 @@ namespace ImageOverlay
         private Point? lastWindowDragPosition;
         private double currentScale = 1.0;
 
-        // Hotkey
-        [DllImport("user32.dll")]
-        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
-
-        [DllImport("user32.dll")]
-        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-
-        private const int HOTKEY_ID = 9000;
-        private const uint MOD_CONTROL = 0x0002;
-        private const uint VK_L = 0x4C;
-
-        private IntPtr _windowHandle;
-        private HwndSource? _source;
-
-        // WS_EX_TRANSPARENT
-        private const int WS_EX_TRANSPARENT = 0x00000020;
-        private const int GWL_EXSTYLE = -20;
-
-        [DllImport("user32.dll")]
-        private static extern int GetWindowLong(IntPtr hwnd, int index);
-
-        [DllImport("user32.dll")]
-        private static extern int SetWindowLong(IntPtr hwnd, int index, int newStyle);
-
         public MainWindow()
         {
             InitializeComponent();
             this.MaxHeight = SystemParameters.WorkArea.Height;
             this.MaxWidth = SystemParameters.WorkArea.Width;
-        }
-
-        protected override void OnSourceInitialized(EventArgs e)
-        {
-            base.OnSourceInitialized(e);
-            _windowHandle = new WindowInteropHelper(this).Handle;
-            _source = HwndSource.FromHwnd(_windowHandle);
-            _source?.AddHook(HwndHook);
-            RegisterHotKey(_windowHandle, HOTKEY_ID, MOD_CONTROL, VK_L);
-        }
-
-        private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-        {
-            const int WM_HOTKEY = 0x0312;
-            if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
-            {
-                // Toggle lock on Ctrl+L
-                MakeClickThrough(!isLocked);
-                handled = true;
-            }
-            return IntPtr.Zero;
-        }
-
-        protected override void OnClosed(EventArgs e)
-        {
-            _source?.RemoveHook(HwndHook);
-            UnregisterHotKey(_windowHandle, HOTKEY_ID);
-            base.OnClosed(e);
         }
 
         private void LoadImage_Click(object sender, RoutedEventArgs e)
@@ -160,45 +108,35 @@ namespace ImageOverlay
         {
             if (isLocked) return;
             
-            if (aspectRatio > 0)
-            {
-                double proposedWidth = this.Width + e.HorizontalChange;
-                if (proposedWidth > 100)
-                {
-                    this.Width = proposedWidth;
-                    this.Height = proposedWidth / aspectRatio;
-                }
-            }
+            double proposedWidth = this.Width + e.HorizontalChange;
+            double proposedHeight = this.Height + e.VerticalChange;
+            
+            if (proposedWidth > 50) this.Width = proposedWidth;
+            if (proposedHeight > 50) this.Height = proposedHeight;
         }
 
         private void Lock_Click(object sender, RoutedEventArgs e)
         {
-            MakeClickThrough(true);
+            MakeClickThrough(!isLocked);
         }
 
         private void MakeClickThrough(bool enable)
         {
             isLocked = enable;
 
-            IntPtr hwnd = new WindowInteropHelper(this).Handle;
-            int extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-
             if (enable)
             {
-                // Make the entire window click-through so the user can interact with apps behind it
-                SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_TRANSPARENT);
+                OverlayImage.IsHitTestVisible = false;
                 
                 ControlsPanel.Visibility = Visibility.Hidden;
                 ResizeThumb.Visibility = Visibility.Hidden;
                 MoveThumb.Visibility = Visibility.Hidden;
                 
-                // Keep the pin button visible to indicate it is locked, but it won't be clickable
                 PinButton.Opacity = 0.5;
             }
             else
             {
-                // Remove click-through
-                SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle & ~WS_EX_TRANSPARENT);
+                OverlayImage.IsHitTestVisible = true;
                 
                 ControlsPanel.Visibility = Visibility.Visible;
                 ResizeThumb.Visibility = Visibility.Visible;
